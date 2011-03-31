@@ -22,6 +22,27 @@ class HasAncestryTreeTest < ActiveSupport::TestCase
     end
   end
 
+  def test_default_parent_column
+    AncestryTestDatabase.with_model do |model|
+      assert_equal :parent_id, model.parent_column
+    end
+  end
+
+  def test_non_default_parent_column
+    AncestryTestDatabase.with_model :parent_column => :alternative_parent do |model|
+      assert_equal :alternative_parent, model.parent_column
+    end
+  end
+
+  def test_setting_parent_column
+    AncestryTestDatabase.with_model do |model|
+      model.parent_column = :parents
+      assert_equal :parents, model.parent_column
+      model.parent_column = :alternative_parent
+      assert_equal :alternative_parent, model.parent_column
+    end
+  end
+
   def test_default_orphan_strategy
     AncestryTestDatabase.with_model do |model|
       assert_equal :destroy, model.orphan_strategy
@@ -522,6 +543,47 @@ class HasAncestryTreeTest < ActiveSupport::TestCase
       assert_equal (0..3).map { |n| 5 ** n }.sum, model.count
 
       model.has_ancestry
+      model.build_ancestry_from_parent_ids!
+
+      # Assert ancestry integrity
+      assert_nothing_raised do
+        model.check_ancestry_integrity!
+      end
+
+      roots = model.roots.all
+      # Assert single root node
+      assert_equal 1, roots.size
+
+      # Assert it has 5 children
+      roots.each do |parent|
+        assert_equal 5, parent.children.count
+        parent.children.each do |parent|
+          assert_equal 5, parent.children.count
+          parent.children.each do |parent|
+            assert_equal 5, parent.children.count
+            parent.children.each do |parent|
+              assert_equal 0, parent.children.count
+            end
+          end
+        end
+      end
+    end
+  end
+
+  def test_build_ancestry_from_alternative_parent_column
+    AncestryTestDatabase.with_model :skip_ancestry => true, :extra_columns => {:reply_to_id => :integer} do |model|
+      [model.create!].each do |parent|
+        (Array.new(5) { model.create! :reply_to_id => parent.id }).each do |parent|
+          (Array.new(5) { model.create! :reply_to_id => parent.id }).each do |parent|
+            (Array.new(5) { model.create! :reply_to_id => parent.id })
+          end
+        end
+      end
+
+      # Assert all nodes where created
+      assert_equal (0..3).map { |n| 5 ** n }.sum, model.count
+
+      model.has_ancestry :parent_column => :reply_to_id
       model.build_ancestry_from_parent_ids!
 
       # Assert ancestry integrity

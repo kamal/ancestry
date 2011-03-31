@@ -7,7 +7,7 @@ class << ActiveRecord::Base
     # Check options
     raise Ancestry::AncestryException.new("Options for has_ancestry must be in a hash.") unless options.is_a? Hash
     options.each do |key, value|
-      unless [:ancestry_column, :orphan_strategy, :cache_depth, :depth_cache_column, :primary_key_format].include? key
+      unless [:ancestry_column, :parent_column, :orphan_strategy, :cache_depth, :depth_cache_column, :primary_key_format].include? key
         raise Ancestry::AncestryException.new("Unknown option for has_ancestry: #{key.inspect} => #{value.inspect}.")
       end
     end
@@ -21,6 +21,10 @@ class << ActiveRecord::Base
     # Create ancestry column accessor and set to option or default
     cattr_accessor :ancestry_column
     self.ancestry_column = options[:ancestry_column] || :ancestry
+    #
+    # Create parent column accessor and set to option or default
+    cattr_accessor :parent_column
+    self.parent_column = options[:parent_column] || :parent_id
 
     # Create orphan strategy accessor and set to option or default (writer comes from DynamicClassMethods)
     cattr_reader :orphan_strategy

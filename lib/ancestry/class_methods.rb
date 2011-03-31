@@ -118,7 +118,7 @@ module Ancestry
     
     # Build ancestry from parent id's for migration purposes
     def build_ancestry_from_parent_ids! parent_id = nil, ancestry = nil
-      self.base_class.all(:conditions => {:parent_id => parent_id}).each do |node|
+      self.base_class.all(:conditions => {self.base_class.parent_column => parent_id}).each do |node|
         node.without_ancestry_callbacks do
           node.update_attribute ancestry_column, ancestry
         end
